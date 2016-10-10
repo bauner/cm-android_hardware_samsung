@@ -73,6 +73,8 @@ namespace android {
 
 #define PROPERTY_RIL_IMPL "gsm.version.ril-impl"
 
+#define PROPERTY_QAN_ELEMENTS "ro.ril.telephony.mqanelements"
+
 // match with constant in RIL.java
 #define MAX_COMMAND_BYTES (8 * 1024)
 
@@ -3992,6 +3994,8 @@ static void responseSimStatusV5(Parcel &p, void *response) {
     p.writeInt32(p_cur->universal_pin_state);
     p.writeInt32(p_cur->gsm_umts_subscription_app_index);
     p.writeInt32(p_cur->cdma_subscription_app_index);
+    p.writeInt32(-1);
+
 
     sendSimStatusAppInfo(p, p_cur->num_applications, p_cur->applications);
 }
