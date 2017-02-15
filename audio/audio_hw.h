@@ -53,9 +53,6 @@ struct effect_info_s {
 #define SOUND_TRIGGER_HAL_LIBRARY_PATH "/system/lib/hw/sound_trigger.primary.flounder.so"
 #endif
 
-#define DUALMIC_CONFIG_NONE 0
-#define DUALMIC_CONFIG_1 1
-
 /* Sound devices specific to the platform
  * The DEVICE_OUT_* and DEVICE_IN_* should be mapped to these sound
  * devices to enable corresponding mixer paths
@@ -71,8 +68,11 @@ enum {
     SND_DEVICE_OUT_HEADPHONES,
     SND_DEVICE_OUT_SPEAKER_AND_HEADPHONES,
     SND_DEVICE_OUT_VOICE_EARPIECE,
+    SND_DEVICE_OUT_VOICE_EARPIECE_WB,
     SND_DEVICE_OUT_VOICE_SPEAKER,
+    SND_DEVICE_OUT_VOICE_SPEAKER_WB,
     SND_DEVICE_OUT_VOICE_HEADPHONES,
+    SND_DEVICE_OUT_VOICE_HEADPHONES_WB,
     SND_DEVICE_OUT_HDMI,
     SND_DEVICE_OUT_SPEAKER_AND_HDMI,
     SND_DEVICE_OUT_BT_SCO,
@@ -90,17 +90,18 @@ enum {
     SND_DEVICE_IN_EARPIECE_MIC_AEC,
     SND_DEVICE_IN_SPEAKER_MIC_AEC,
     SND_DEVICE_IN_HEADSET_MIC_AEC,
+    SND_DEVICE_IN_VOICE_MIC,
+    SND_DEVICE_IN_VOICE_EARPIECE_MIC,
+    SND_DEVICE_IN_VOICE_EARPIECE_MIC_WB,
     SND_DEVICE_IN_VOICE_SPEAKER_MIC,
+    SND_DEVICE_IN_VOICE_SPEAKER_MIC_WB,
     SND_DEVICE_IN_VOICE_HEADSET_MIC,
+    SND_DEVICE_IN_VOICE_HEADSET_MIC_WB,
     SND_DEVICE_IN_HDMI_MIC,
     SND_DEVICE_IN_BT_SCO_MIC,
     SND_DEVICE_IN_CAMCORDER_MIC,
-    SND_DEVICE_IN_VOICE_DMIC_1,
-    SND_DEVICE_IN_VOICE_SPEAKER_DMIC_1,
     SND_DEVICE_IN_VOICE_REC_HEADSET_MIC,
     SND_DEVICE_IN_VOICE_REC_MIC,
-    SND_DEVICE_IN_VOICE_REC_DMIC_1,
-    SND_DEVICE_IN_VOICE_REC_DMIC_NS_1,
     SND_DEVICE_IN_LOOPBACK_AEC,
     SND_DEVICE_IN_END,
 
@@ -362,6 +363,7 @@ struct mixer_card {
     int                 card;
     struct mixer*       mixer;
     struct audio_route* audio_route;
+    struct timespec     dsp_poweroff_time;
 };
 
 struct audio_usecase {
@@ -375,6 +377,13 @@ struct audio_usecase {
     struct listnode         mixer_list;
 };
 
+struct voice_data {
+    bool  in_call;
+    float volume;
+    bool  bluetooth_nrec;
+    bool  bluetooth_wb;
+    void  *session;
+};
 
 struct audio_device {
     struct audio_hw_device  device;
@@ -383,15 +392,15 @@ struct audio_device {
     audio_mode_t            mode;
     struct stream_in*       active_input;
     struct stream_out*      primary_output;
-    int                     in_call;
-    float                   voice_volume;
     bool                    mic_mute;
-    bool                    bluetooth_nrec;
+    bool                    screen_off;
+
+    struct voice_data       voice;
+
     int*                    snd_dev_ref_cnt;
     struct listnode         usecase_list;
     bool                    speaker_lr_swap;
     unsigned int            cur_hdmi_channels;
-    int                     dualmic_config;
     bool                    ns_in_voice_rec;
 
     void*                   offload_fx_lib;
