@@ -20,15 +20,15 @@
     <item>CyanogenMod (por defeutu)</item>
     <item>IU</item>
     <item>Videu</item>
-    <item>Videu caldiu</item>
-    <item>Videu fríu</item>
+    <item>Video warm</item>
+    <item>Video cold</item>
     <item>Cámara</item>
     <item>Navegación</item>
     <item>Galería</item>
-    <item>Videollamada</item>
+    <item>VT</item>
   </string-array>
   <string-array name="mdnie_negative_entries">
     <item>Normal</item>
-    <item>Invertíu</item>
+    <item>Inverted</item>
   </string-array>
 </resources>
