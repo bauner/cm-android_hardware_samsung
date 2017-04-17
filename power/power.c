@@ -192,10 +192,15 @@ static void set_power_profile(struct samsung_power_module *samsung_pwr,
 
     switch (profile) {
         case PROFILE_POWER_SAVE:
+            // Grab value set by init.*.rc
+            sysfs_read(CPU0_HISPEED_FREQ_PATH, samsung_pwr->cpu0_hispeed_freq,
+                       sizeof(samsung_pwr->cpu0_hispeed_freq));
             // Limit to hispeed freq
             sysfs_write(CPU0_MAX_FREQ_PATH, samsung_pwr->cpu0_hispeed_freq);
             rc = stat(CPU4_MAX_FREQ_PATH, &sb);
             if (rc == 0) {
+                sysfs_read(CPU4_HISPEED_FREQ_PATH, samsung_pwr->cpu4_hispeed_freq,
+                           sizeof(samsung_pwr->cpu4_hispeed_freq));
                 sysfs_write(CPU4_MAX_FREQ_PATH, samsung_pwr->cpu4_hispeed_freq);
             }
             ALOGV("%s: set powersave mode", __func__);
@@ -324,7 +329,6 @@ static void init_cpufreqs(struct samsung_power_module *samsung_pwr)
 static void init_touch_input_power_path(struct samsung_power_module *samsung_pwr)
 {
     char dir[1024];
-    char errno_str[64];
     uint32_t i;
 
     for (i = 0; i < 20; i++) {
@@ -417,7 +421,6 @@ static void samsung_power_hint(struct power_module *module,
                                   void *data)
 {
     struct samsung_power_module *samsung_pwr = (struct samsung_power_module *) module;
-    char errno_str[64];
     int len;
 
     /* Bail out if low-power mode is active */
@@ -436,17 +439,24 @@ static void samsung_power_hint(struct power_module *module,
             break;
         case POWER_HINT_LOW_POWER:
             ALOGV("%s: POWER_HINT_LOW_POWER", __func__);
-            set_power_profile(samsung_pwr, PROFILE_POWER_SAVE);
+            set_power_profile(samsung_pwr, data ? PROFILE_POWER_SAVE : PROFILE_BALANCED);
             break;
         case POWER_HINT_LAUNCH:
+            ALOGV("%s: POWER_HINT_LAUNCH", __func__);
+            send_boostpulse(samsung_pwr->boostpulse_fd);
+            break;
         case POWER_HINT_CPU_BOOST:
-            ALOGV("%s: POWER_HINT_LAUNCH | POWER_HINT_CPU_BOOST", __func__);
+            ALOGV("%s: POWER_HINT_CPU_BOOST", __func__);
             boost((*(int32_t *)data));
             break;
         case POWER_HINT_SET_PROFILE:
             ALOGV("%s: POWER_HINT_SET_PROFILE", __func__);
             int profile = *((intptr_t *)data);
             set_power_profile(samsung_pwr, profile);
+            break;
+        case POWER_HINT_DISABLE_TOUCH:
+            ALOGV("%s: POWER_HINT_DISABLE_TOUCH", __func__);
+            sysfs_write(samsung_pwr->touchscreen_power_path, data ? "0" : "1");
             break;
         default:
             ALOGW("%s: Unknown power hint: %d", __func__, hint);
