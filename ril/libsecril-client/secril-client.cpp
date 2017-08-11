@@ -1088,6 +1088,8 @@ static int SendOemRequestHookRaw(HRilClient client, int req_id, char *data, size
     RilClientPrv *client_prv;
     int maxfd = -1;
 
+    unsigned int check_req_id = req_id;
+
     client_prv = (RilClientPrv *)(client->prv);
 
     // Allocate a token.
@@ -1126,11 +1128,24 @@ static int SendOemRequestHookRaw(HRilClient client, int req_id, char *data, size
         goto error;
     }
 
+    // check if the handler for specified event is NULL and deregister token
+    // to prevent token pool overflow
+    if(!FindReqHandler(client_prv, token, &check_req_id)) {
+        FreeToken(&(client_prv->token_pool), token);
+        ClearReqHistory(client_prv, token);
+    }
+
     return RIL_CLIENT_ERR_SUCCESS;
 
 error:
     FreeToken(&(client_prv->token_pool), token);
     ClearReqHistory(client_prv, token);
+
+    if (ret == -EPIPE || ret == -EBADFD) {
+        close(client_prv->sock);
+        client_prv->sock = -1;
+        client_prv->b_connect = 0;
+    }
 
     return RIL_CLIENT_ERR_UNKNOWN;
 }
@@ -1288,6 +1303,23 @@ static void * RxReaderFunc(void *param) {
                     client_prv->sock = -1;
                     client_prv->b_connect = 0;
                 }
+            }
+        } else {
+            RLOGE("%s: select() returned %d\n", __FUNCTION__, -errno);
+
+            if (client_prv->sock > 0) {
+                close(client_prv->sock);
+                client_prv->sock = -1;
+                client_prv->b_connect = 0;
+            }
+
+            if (client_prv->p_rs)
+                record_stream_free(client_prv->p_rs);
+
+            // EOS
+            if (client_prv->err_cb) {
+                client_prv->err_cb(client_prv->err_cb_data, RIL_CLIENT_ERR_CONNECT);
+                return NULL;
             }
         }
     }
@@ -1572,9 +1604,8 @@ static int blockingWrite(int fd, const void *buffer, size_t len) {
         }
         else {
             RLOGE ("RIL Response: unexpected error on write errno:%d", errno);
-            printf("RIL Response: unexpected error on write errno:%d\n", errno);
             close(fd);
-            return -1;
+            return -errno;
         }
     }
 
